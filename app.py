@@ -44,7 +44,7 @@ if normal_telophase is not None and abnormal_telophase is not None and model is 
     # Streamlit input fields for user to input cell features for classification
     st.write("Enter the feature values of the Telophase cell to classify it as Normal or Abnormal.")
 
-    mean_intensity = st.number_input("Mean Intensity", min_value=0.0, max_value=100.0, step=0.1)
+    mean_intensity = st.number_input("Mean Intensity", min_value=0.0, max_value=150.0, step=0.1)
     area = st.number_input("Area", min_value=0.0, max_value=10000.0, step=0.1)
     perimeter = st.number_input("Perimeter", min_value=0.0, max_value=1000.0, step=0.1)
     circularity = st.number_input("Circularity", min_value=0.0, max_value=1.0, step=0.01)
