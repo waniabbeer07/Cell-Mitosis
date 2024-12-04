@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 import streamlit as st
 import matplotlib.pyplot as plt
+from io import BytesIO
 
 # Function to calculate thresholds for each feature
 def calculate_thresholds(df, features, quantile=0.9):
@@ -78,14 +79,23 @@ def main():
                 'abnormal_thresholds': abnormal_thresholds
             }
             
-            with open('cell_classification_model.pkl', 'wb') as file:
-                pickle.dump(model, file)
+            # Save model as a pickle file in memory
+            model_pickle = BytesIO()
+            pickle.dump(model, model_pickle)
+            model_pickle.seek(0)
             
-            st.write("Model saved as 'cell_classification_model.pkl'")
+            # Provide a download button for the user to download the model
+            st.download_button(
+                label="Download Generated Classification Model",
+                data=model_pickle,
+                file_name="cell_classification_model.pkl",
+                mime="application/octet-stream"
+            )
+            st.write("Model generated. You can download the model file.")
         else:
             # If a model file is uploaded, load it
-            with open(model_file, 'rb') as file:
-                loaded_model = pickle.load(file)
+            model_pickle = model_file.read()
+            loaded_model = pickle.loads(model_pickle)
             
             normal_thresholds = loaded_model['normal_thresholds']
             abnormal_thresholds = loaded_model['abnormal_thresholds']
