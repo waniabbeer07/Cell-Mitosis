@@ -27,16 +27,17 @@ if normal_file is not None and abnormal_file is not None:
     normal_df['label'] = 0  # Normal cells are labeled as 0
     abnormal_df['label'] = 1  # Abnormal cells are labeled as 1
     
-    # Combine datasets
-    data = pd.concat([normal_df, abnormal_df])
-    
+    # Display dataset information
     st.write(f"Normal cells dataset: {normal_df.shape[0]} rows and {normal_df.shape[1]} columns")
     st.write(f"Abnormal cells dataset: {abnormal_df.shape[0]} rows and {abnormal_df.shape[1]} columns")
     
-    # Display first few rows of the combined dataset
-    st.write("First few rows of the combined dataset:")
-    st.write(data.head())
+    # Display separate previews for normal and abnormal cells
+    st.subheader('Preview of Normal Cells Dataset')
+    st.write(normal_df.head())
     
+    st.subheader('Preview of Abnormal Cells Dataset')
+    st.write(abnormal_df.head())
+
 else:
     st.write("Please upload both the Normal and Abnormal cells datasets in CSV format.")
 
@@ -58,7 +59,7 @@ aspect_ratio = st.number_input('Aspect Ratio', min_value=0.0, max_value=2.0, val
 # Validate if the files and model are loaded
 if model_file is not None and normal_file is not None and abnormal_file is not None:
     # Checking if required columns exist in the dataset
-    if all(col in data.columns for col in ['mean_intensity', 'circularity', 'aspect_ratio']):
+    if all(col in normal_df.columns for col in ['mean_intensity', 'circularity', 'aspect_ratio']):
         # Predict button to classify the cell
         if st.button('Classify'):
             # Prepare the input data for prediction
@@ -91,24 +92,24 @@ if normal_file is not None and abnormal_file is not None:
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 
     # Plot Mean Intensity Distribution
-    sns.histplot(data[data['label'] == 0]['mean_intensity'], color='blue', label='Normal', kde=True, ax=axes[0])
-    sns.histplot(data[data['label'] == 1]['mean_intensity'], color='red', label='Abnormal', kde=True, ax=axes[0])
+    sns.histplot(normal_df['mean_intensity'], color='blue', label='Normal', kde=True, ax=axes[0])
+    sns.histplot(abnormal_df['mean_intensity'], color='red', label='Abnormal', kde=True, ax=axes[0])
     axes[0].set_title('Mean Intensity Distribution')
     axes[0].set_xlabel('Mean Intensity')
     axes[0].set_ylabel('Frequency')
     axes[0].legend()
 
     # Plot Circularity Distribution
-    sns.histplot(data[data['label'] == 0]['circularity'], color='blue', label='Normal', kde=True, ax=axes[1])
-    sns.histplot(data[data['label'] == 1]['circularity'], color='red', label='Abnormal', kde=True, ax=axes[1])
+    sns.histplot(normal_df['circularity'], color='blue', label='Normal', kde=True, ax=axes[1])
+    sns.histplot(abnormal_df['circularity'], color='red', label='Abnormal', kde=True, ax=axes[1])
     axes[1].set_title('Circularity Distribution')
     axes[1].set_xlabel('Circularity')
     axes[1].set_ylabel('Frequency')
     axes[1].legend()
 
     # Plot Aspect Ratio Distribution
-    sns.histplot(data[data['label'] == 0]['aspect_ratio'], color='blue', label='Normal', kde=True, ax=axes[2])
-    sns.histplot(data[data['label'] == 1]['aspect_ratio'], color='red', label='Abnormal', kde=True, ax=axes[2])
+    sns.histplot(normal_df['aspect_ratio'], color='blue', label='Normal', kde=True, ax=axes[2])
+    sns.histplot(abnormal_df['aspect_ratio'], color='red', label='Abnormal', kde=True, ax=axes[2])
     axes[2].set_title('Aspect Ratio Distribution')
     axes[2].set_xlabel('Aspect Ratio')
     axes[2].set_ylabel('Frequency')
@@ -116,4 +117,3 @@ if normal_file is not None and abnormal_file is not None:
 
     plt.tight_layout()
     st.pyplot(fig)
-
