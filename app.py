@@ -46,7 +46,7 @@ if model_file is not None and normal_csv is not None and abnormal_csv is not Non
     data = pd.concat([normal_df, abnormal_df])
 
     # Feature columns
-    features = ['mean_intensity', 'area', 'perimeter', 'circularity', 'aspect_ratio']
+    features = ['mean_intensity','circularity', 'aspect_ratio']
     X = data[features]
     y = data['label']
 
