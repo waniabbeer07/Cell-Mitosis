@@ -31,6 +31,16 @@ def generate_model(normal_csv_path, abnormal_csv_path, output_model_path='thresh
     st.success(f"Threshold model saved to {output_model_path}")
     return thresholds
 
+def classify_input(input_values, thresholds):
+    classification = {}
+    for feature, value in input_values.items():
+        # Check if the value is within the normal range
+        if value < thresholds[feature]['normal_min'] or value > thresholds[feature]['normal_max']:
+            classification[feature] = 'abnormal'
+        else:
+            classification[feature] = 'normal'
+    return classification
+
 # Streamlit UI
 st.title("Threshold Model Generator")
 
@@ -52,6 +62,18 @@ if normal_file is not None and abnormal_file is not None:
     # Show a preview of the thresholds
     st.write("Generated thresholds:")
     st.write(thresholds)
+
+    # Get user input for classification
+    st.subheader("Enter feature values to classify:")
+    input_values = {}
+    for feature in thresholds:
+        input_values[feature] = st.number_input(f"Enter value for {feature}", value=0.0)
+
+    if st.button("Classify"):
+        classification = classify_input(input_values, thresholds)
+        st.write("Classification Results:")
+        for feature, result in classification.items():
+            st.write(f"{feature}: {result}")
 
 else:
     st.warning("Please upload both normal and abnormal datasets to generate the model.")
