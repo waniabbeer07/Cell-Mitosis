@@ -9,7 +9,7 @@ def generate_model(normal_csv_path, abnormal_csv_path, output_model_path='thresh
     abnormal_df = pd.read_csv(abnormal_csv_path)
 
     # Features we are interested in
-    features = ['mean_intensity', 'area', 'circularity']
+    features = ['mean intensity', 'area', 'circularity']
 
     # Calculate thresholds for each feature
     thresholds = {}
@@ -46,38 +46,51 @@ def classify_input(input_values, thresholds):
 # Streamlit UI
 st.title("Threshold Classifier for Cell Features")
 
-# File uploaders for normal and abnormal datasets
-normal_file = st.file_uploader("Upload the normal dataset (CSV)", type=["csv"])
-abnormal_file = st.file_uploader("Upload the abnormal dataset (CSV)", type=["csv"])
+# Option to upload a threshold model
+threshold_model_file = st.file_uploader("Upload your own threshold model (Pickle file)", type=["pkl"])
 
-if normal_file is not None and abnormal_file is not None:
-    # Save the uploaded files to temporary locations
-    with tempfile.NamedTemporaryFile(delete=False) as tmp_normal, tempfile.NamedTemporaryFile(delete=False) as tmp_abnormal:
-        tmp_normal.write(normal_file.getvalue())
-        tmp_abnormal.write(abnormal_file.getvalue())
-        normal_temp_path = tmp_normal.name
-        abnormal_temp_path = tmp_abnormal.name
+if threshold_model_file is not None:
+    # Load the user's custom threshold model
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_model:
+        tmp_model.write(threshold_model_file.getvalue())
+        threshold_model_path = tmp_model.name
 
-    # Generate the model with uploaded files
-    thresholds = generate_model(normal_temp_path, abnormal_temp_path)
+    with open(threshold_model_path, 'rb') as model_file:
+        thresholds = pickle.load(model_file)
 
-    # Show a preview of the thresholds
-    st.write("Generated thresholds:")
-    st.write(thresholds)
-
-    # Get user input for classification of the three features
-    st.subheader("Enter feature values to classify:")
-
-    input_values = {}
-    input_values['mean intensity'] = st.number_input("Enter value for mean intensity", value=0.0)
-    input_values['area'] = st.number_input("Enter value for area", value=0.0)
-    input_values['circularity'] = st.number_input("Enter value for circularity", value=0.0)
-
-    if st.button("Classify"):
-        classification = classify_input(input_values, thresholds)
-        st.write("Classification Results:")
-        for feature, result in classification.items():
-            st.write(f"{feature}: {result}")
+    st.success("Threshold model loaded successfully.")
+    st.write("Using the uploaded threshold model.")
 
 else:
-    st.warning("Please upload both normal and abnormal datasets to generate the model.")
+    # File uploaders for normal and abnormal datasets if model is not uploaded
+    normal_file = st.file_uploader("Upload the normal dataset (CSV)", type=["csv"])
+    abnormal_file = st.file_uploader("Upload the abnormal dataset (CSV)", type=["csv"])
+
+    if normal_file is not None and abnormal_file is not None:
+        # Save the uploaded files to temporary locations
+        with tempfile.NamedTemporaryFile(delete=False) as tmp_normal, tempfile.NamedTemporaryFile(delete=False) as tmp_abnormal:
+            tmp_normal.write(normal_file.getvalue())
+            tmp_abnormal.write(abnormal_file.getvalue())
+            normal_temp_path = tmp_normal.name
+            abnormal_temp_path = tmp_abnormal.name
+
+        # Generate the model with uploaded files
+        thresholds = generate_model(normal_temp_path, abnormal_temp_path)
+
+        # Show a preview of the thresholds
+        st.write("Generated thresholds:")
+        st.write(thresholds)
+
+# Get user input for classification of the three features
+st.subheader("Enter feature values to classify:")
+
+input_values = {}
+input_values['mean intensity'] = st.number_input("Enter value for mean intensity", value=0.0)
+input_values['area'] = st.number_input("Enter value for area", value=0.0)
+input_values['circularity'] = st.number_input("Enter value for circularity", value=0.0)
+
+if st.button("Classify"):
+    classification = classify_input(input_values, thresholds)
+    st.write("Classification Results:")
+    for feature, result in classification.items():
+        st.write(f"{feature}: {result}")
