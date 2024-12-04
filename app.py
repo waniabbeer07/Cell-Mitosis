@@ -1,104 +1,77 @@
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import pickle
 import streamlit as st
+import pandas as pd
+import pickle
+from sklearn.ensemble import GradientBoostingClassifier
 
-# Function to calculate thresholds for each feature
-def calculate_thresholds(df, features, quantile=0.9):
-    thresholds = {}
-    
-    for feature in features:
-        # Calculate the threshold for each feature based on the quantile
-        threshold = df[feature].quantile(quantile)
-        
-        # Store the thresholds
-        thresholds[feature] = threshold
-        
-        # Visualize the feature distributions
-        plt.figure(figsize=(8, 6))
-        plt.hist(df[feature], bins=20, alpha=0.5, label=f'{feature} Distribution')
-        plt.axvline(threshold, color='blue', linestyle='dashed', linewidth=2, label=f'Threshold ({threshold:.2f})')
-        plt.title(f"Feature: {feature}")
-        plt.xlabel(feature)
-        plt.ylabel("Frequency")
-        plt.legend()
-        
-        # Streamlit to display the plot
-        st.pyplot(plt)
-    
-    return thresholds
-
-# Function to classify input data based on thresholds
-def classify_data(input_data, normal_thresholds, abnormal_thresholds, features):
-    # Check for each feature if it's above the normal threshold and below the abnormal threshold
-    for feature in features:
-        normal_threshold = normal_thresholds[feature]
-        abnormal_threshold = abnormal_thresholds[feature]
-        
-        if input_data[feature] > normal_threshold and input_data[feature] < abnormal_threshold:
-            return 'normal'
-    
-    return 'abnormal'
-
-# Streamlit interface
+# Streamlit UI for uploading files and inputs
 st.title("Cell Classification App")
-st.write("Upload your normal and abnormal data CSV files, and the model will classify the data.")
 
-# File upload for normal and abnormal data
-normal_file = st.file_uploader("Upload Normal Data CSV", type="csv")
-abnormal_file = st.file_uploader("Upload Abnormal Data CSV", type="csv")
+# Upload the trained model
+model_file = st.file_uploader("Upload your trained model (.pkl)", type=["pkl"])
+if model_file is not None:
+    # Load the model
+    clf = pickle.load(model_file)
+    st.success("Model loaded successfully!")
 
-# File path for saved model (if available)
-model_file_path = 'cell_classification_model.pkl'
+# Upload normal and abnormal CSV data files
+normal_file = st.file_uploader("Upload normal cell data (CSV)", type=["csv"])
+abnormal_file = st.file_uploader("Upload abnormal cell data (CSV)", type=["csv"])
 
-# Load the model if it exists
-try:
-    with open(model_file_path, 'rb') as file:
-        model = pickle.load(file)
-    normal_thresholds = model['normal_thresholds']
-    abnormal_thresholds = model['abnormal_thresholds']
-    st.write("Model loaded from saved file.")
-except FileNotFoundError:
-    st.write("No saved model found. Please upload normal and abnormal data to generate thresholds.")
-
-if normal_file and abnormal_file:
-    # Read the uploaded files
+if normal_file is not None and abnormal_file is not None:
+    # Load the CSV files into pandas DataFrames
     normal_df = pd.read_csv(normal_file)
     abnormal_df = pd.read_csv(abnormal_file)
-    
-    # Define the feature columns to calculate thresholds for
-    features = ['mean_intensity', 'aspect_ratio', 'circularity']
 
-    # Calculate thresholds for each feature (For normal data and abnormal data)
-    normal_thresholds = calculate_thresholds(normal_df, features)
-    abnormal_thresholds = calculate_thresholds(abnormal_df, features)
+    # Display a preview of the data
+    st.subheader("Normal Cell Data Preview")
+    st.write(normal_df.head())
+    st.subheader("Abnormal Cell Data Preview")
+    st.write(abnormal_df.head())
 
-    # Save the model (thresholds) as a pickle file
-    model = {
-        'normal_thresholds': normal_thresholds,
-        'abnormal_thresholds': abnormal_thresholds
-    }
-    
-    with open(model_file_path, 'wb') as file:
-        pickle.dump(model, file)
+    # Combine the datasets for training
+    normal_df['label'] = 0  # Normal cells are labeled as 0
+    abnormal_df['label'] = 1  # Abnormal cells are labeled as 1
+    data = pd.concat([normal_df, abnormal_df])
 
-    st.write(f"Model saved as '{model_file_path}'")
+    # Feature columns
+    features = ['mean_intensity', 'circularity', 'aspect_ratio']
+    X = data[features]
+    y = data['label']
 
-# Feature selection and input data for classification
-st.sidebar.header("Input Data for Classification")
+    # Train the classifier (if not provided)
+    if model_file is None:
+        clf = GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)
+        clf.fit(X, y)
+        st.success("Model trained on the uploaded data!")
 
-# Let user input any features
-selected_features = st.sidebar.multiselect("Select Features", ['mean_intensity', 'aspect_ratio', 'circularity'])
+# Button to request user input and classify data
+if st.button("Enter Features for Classification"):
+    # Input feature values from the user
+    st.subheader("Input features for classification")
+    mean_intensity = st.number_input("Mean Intensity", value=131.0, min_value=0.0)
+    circularity = st.number_input("Circularity", value=0.5, min_value=0.0, max_value=1.0)
+    aspect_ratio = st.number_input("Aspect Ratio", value=1.0, min_value=0.0)
 
-# Create input fields based on selected features
-input_data = {}
-for feature in selected_features:
-    input_data[feature] = st.sidebar.number_input(f"Enter {feature}", min_value=0.0, step=0.01)
+    # Predict the classification based on user input
+    if st.button("Classify"):
+        input_data = pd.DataFrame({
+            'mean_intensity': [mean_intensity],
+            'circularity': [circularity],
+            'aspect_ratio': [aspect_ratio]
+        })
 
-# Classify the input data if the model is loaded
-if 'normal_thresholds' in locals() and 'abnormal_thresholds' in locals() and selected_features:
-    classification_result = classify_data(input_data, normal_thresholds, abnormal_thresholds, selected_features)
-    st.write(f"The input data is classified as: **{classification_result}**")
-else:
-    st.write("Please upload the normal and abnormal data to generate a model for classification and select at least one feature to classify.")
+        # Predict using the trained model
+        prediction = clf.predict(input_data)
+        if prediction == 0:
+            st.write("The cell is classified as: **Normal**")
+        else:
+            st.write("The cell is classified as: **Abnormal**")
+
+# Optional: Save the trained model for future use
+if st.button("Save Model"):
+    if model_file is not None:
+        with open('trained_model.pkl', 'wb') as file:
+            pickle.dump(clf, file)
+        st.success("Model saved successfully as 'trained_model.pkl'")
+    else:
+        st.warning("Please upload or train a model before saving.")
