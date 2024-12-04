@@ -49,6 +49,19 @@ st.write("Upload your normal and abnormal data CSV files, and the model will cla
 normal_file = st.file_uploader("Upload Normal Data CSV", type="csv")
 abnormal_file = st.file_uploader("Upload Abnormal Data CSV", type="csv")
 
+# File path for saved model (if available)
+model_file_path = 'cell_classification_model.pkl'
+
+# Load the model if it exists
+try:
+    with open(model_file_path, 'rb') as file:
+        model = pickle.load(file)
+    normal_thresholds = model['normal_thresholds']
+    abnormal_thresholds = model['abnormal_thresholds']
+    st.write("Model loaded from saved file.")
+except FileNotFoundError:
+    st.write("No saved model found. Please upload normal and abnormal data to generate thresholds.")
+
 if normal_file and abnormal_file:
     # Read the uploaded files
     normal_df = pd.read_csv(normal_file)
@@ -67,10 +80,10 @@ if normal_file and abnormal_file:
         'abnormal_thresholds': abnormal_thresholds
     }
     
-    with open('cell_classification_model.pkl', 'wb') as file:
+    with open(model_file_path, 'wb') as file:
         pickle.dump(model, file)
 
-    st.write("Model saved as 'cell_classification_model.pkl'")
+    st.write(f"Model saved as '{model_file_path}'")
 
 # Input data for classification
 st.sidebar.header("Input Data for Classification")
@@ -84,17 +97,9 @@ input_data = {
     'circularity': circularity
 }
 
-# Load the model
-model_file = st.sidebar.file_uploader("Upload your classification model (cell_classification_model.pkl)", type="pkl")
-
-if model_file is not None:
-    model = pickle.load(model_file)
-    normal_thresholds = model['normal_thresholds']
-    abnormal_thresholds = model['abnormal_thresholds']
-
-    # Classify the input data
+# Classify the input data if the model is loaded
+if 'normal_thresholds' in locals() and 'abnormal_thresholds' in locals():
     classification_result = classify_data(input_data, normal_thresholds, abnormal_thresholds, features)
-
     st.write(f"The input data is classified as: **{classification_result}**")
 else:
-    st.write("Please upload the classification model (.pkl) to classify the input data.")
+    st.write("Please upload the normal and abnormal data to generate a model for classification.")
