@@ -16,18 +16,11 @@ if model_file is not None:
 normal_csv = st.file_uploader("Upload Normal CSV", type=["csv"])
 abnormal_csv = st.file_uploader("Upload Abnormal CSV", type=["csv"])
 
-# Handle feature inputs
-if 'mean_intensity' not in st.session_state:
-    st.session_state.mean_intensity = 131.0
-if 'circularity' not in st.session_state:
-    st.session_state.circularity = 0.5
-if 'aspect_ratio' not in st.session_state:
-    st.session_state.aspect_ratio = 1.0
-
+# Handle feature inputs directly with up to 4 significant digits
 st.subheader("Input features for classification")
-st.session_state.mean_intensity = st.number_input("Mean Intensity", value=st.session_state.mean_intensity, min_value=0.0)
-st.session_state.circularity = st.number_input("Circularity", value=st.session_state.circularity, min_value=0.0, max_value=1.0)
-st.session_state.aspect_ratio = st.number_input("Aspect Ratio", value=st.session_state.aspect_ratio, min_value=0.0)
+mean_intensity = st.number_input("Mean Intensity", value=131.0, min_value=0.0, format="%.4f")
+circularity = st.number_input("Circularity", value=0.5, min_value=0.0, max_value=1.0, format="%.4f")
+aspect_ratio = st.number_input("Aspect Ratio", value=1.0, min_value=0.0, format="%.4f")
 
 # Show the uploaded CSVs if they are loaded
 if normal_csv is not None:
@@ -54,11 +47,11 @@ if model_file is not None and normal_csv is not None and abnormal_csv is not Non
     clf = GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)
     clf.fit(X, y)
 
-    # Predict using the user input
+    # Prepare input data for prediction
     input_data = {
-        'mean_intensity': st.session_state.mean_intensity,
-        'circularity': st.session_state.circularity,
-        'aspect_ratio': st.session_state.aspect_ratio
+        'mean_intensity': mean_intensity,
+        'circularity': circularity,
+        'aspect_ratio': aspect_ratio
     }
     
     new_data = pd.DataFrame([input_data])
