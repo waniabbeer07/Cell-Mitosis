@@ -8,9 +8,11 @@ def generate_model(normal_csv_path, abnormal_csv_path, output_model_path='thresh
     normal_df = pd.read_csv(normal_csv_path)
     abnormal_df = pd.read_csv(abnormal_csv_path)
 
+    # Features we are interested in
+    features = ['mean intensity', 'area', 'circularity']
+
     # Calculate thresholds for each feature
     thresholds = {}
-    features = normal_df.columns
     for feature in features:
         normal_min = normal_df[feature].min()
         normal_max = normal_df[feature].max()
@@ -42,7 +44,7 @@ def classify_input(input_values, thresholds):
     return classification
 
 # Streamlit UI
-st.title("Threshold Model Generator")
+st.title("Threshold Classifier for Cell Features")
 
 # File uploaders for normal and abnormal datasets
 normal_file = st.file_uploader("Upload the normal dataset (CSV)", type=["csv"])
@@ -63,11 +65,13 @@ if normal_file is not None and abnormal_file is not None:
     st.write("Generated thresholds:")
     st.write(thresholds)
 
-    # Get user input for classification
+    # Get user input for classification of the three features
     st.subheader("Enter feature values to classify:")
+
     input_values = {}
-    for feature in thresholds:
-        input_values[feature] = st.number_input(f"Enter value for {feature}", value=0.0)
+    input_values['mean intensity'] = st.number_input("Enter value for mean intensity", value=0.0)
+    input_values['area'] = st.number_input("Enter value for area", value=0.0)
+    input_values['circularity'] = st.number_input("Enter value for circularity", value=0.0)
 
     if st.button("Classify"):
         classification = classify_input(input_values, thresholds)
