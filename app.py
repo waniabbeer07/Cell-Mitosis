@@ -1,28 +1,50 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import joblib
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.neighbors import KernelDensity
+import numpy as np
 
 # Streamlit app layout
 st.title('Cell Classification App')
 st.write('This app classifies cells as Normal or Abnormal based on their features.')
 
-# Upload section for the model files
+# File upload section
+st.subheader('Upload Your Normal and Abnormal Cell CSV Files')
+
+# Upload Normal Cells Data
+normal_file = st.file_uploader("Upload the CSV file for Normal Cells", type=['csv'])
+# Upload Abnormal Cells Data
+abnormal_file = st.file_uploader("Upload the CSV file for Abnormal Cells", type=['csv'])
+
+if normal_file is not None:
+    # Load the normal cells dataset
+    normal_df = pd.read_csv(normal_file)
+    st.write(f"Normal cells dataset: {normal_df.shape[0]} rows and {normal_df.shape[1]} columns")
+    st.write("First few rows of the normal cells dataset:")
+    st.write(normal_df.head())
+
+if abnormal_file is not None:
+    # Load the abnormal cells dataset
+    abnormal_df = pd.read_csv(abnormal_file)
+    st.write(f"Abnormal cells dataset: {abnormal_df.shape[0]} rows and {abnormal_df.shape[1]} columns")
+    st.write("First few rows of the abnormal cells dataset:")
+    st.write(abnormal_df.head())
+
+# Upload Model files
 st.subheader('Upload Your Trained Models')
 
-normal_model_file = st.file_uploader("Upload the Trained Normal Cells Model (.pkl)", type=['pkl'])
-abnormal_model_file = st.file_uploader("Upload the Trained Abnormal Cells Model (.pkl)", type=['pkl'])
+normal_model_file = st.file_uploader("Upload your trained Normal Cells model (.pkl)", type=['pkl'])
+abnormal_model_file = st.file_uploader("Upload your trained Abnormal Cells model (.pkl)", type=['pkl'])
 
-# Check if models are uploaded
 if normal_model_file is not None:
-    kde_normal = joblib.load(normal_model_file)
+    normal_model = joblib.load(normal_model_file)
     st.write("Normal cells model loaded successfully!")
 
 if abnormal_model_file is not None:
-    kde_abnormal = joblib.load(abnormal_model_file)
+    abnormal_model = joblib.load(abnormal_model_file)
     st.write("Abnormal cells model loaded successfully!")
 
 # Feature input from the user
@@ -32,36 +54,65 @@ mean_intensity = st.number_input('Mean Intensity', min_value=0.0, max_value=200.
 circularity = st.number_input('Circularity', min_value=0.0, max_value=1.0, value=0.7)
 aspect_ratio = st.number_input('Aspect Ratio', min_value=0.0, max_value=2.0, value=1.0)
 
-# Check if models are loaded and perform classification
+# Check if models and datasets are loaded
 if normal_model_file is not None and abnormal_model_file is not None:
-    # Prepare the input data for classification
-    input_data = np.array([[mean_intensity, circularity, aspect_ratio]])
-    
-    # Standardize the input data
-    scaler = StandardScaler()
-    input_data_scaled = scaler.fit_transform(input_data)
-    
-    # Calculate log-likelihoods for both classes
-    log_likelihood_normal = kde_normal.score_samples(input_data_scaled)
-    log_likelihood_abnormal = kde_abnormal.score_samples(input_data_scaled)
-    
-    # Classify based on the higher log-likelihood
-    if log_likelihood_normal > log_likelihood_abnormal:
-        st.write("The cell is classified as: Normal")
-    else:
-        st.write("The cell is classified as: Abnormal")
+    # Validate if the input data has the required columns
+    if 'mean_intensity' in normal_df.columns and 'circularity' in normal_df.columns and 'aspect_ratio' in normal_df.columns:
+        
+        # Classify normal cell feature
+        if st.button('Classify Normal Cell'):
+            input_data = pd.DataFrame({
+                'mean_intensity': [mean_intensity],
+                'circularity': [circularity],
+                'aspect_ratio': [aspect_ratio]
+            })
+            
+            # Standardize the input data
+            scaler = StandardScaler()
+            input_data_scaled = scaler.fit_transform(input_data)
+            
+            # Convert the scaled input data to a DataFrame with feature names
+            input_data_scaled_df = pd.DataFrame(input_data_scaled, columns=['mean_intensity', 'circularity', 'aspect_ratio'])
+            
+            # Calculate log-likelihoods for both classes
+            log_likelihood_normal = normal_model.score_samples(input_data_scaled_df)
+            log_likelihood_abnormal = abnormal_model.score_samples(input_data_scaled_df)
+            
+            # Classify based on the higher log-likelihood
+            if log_likelihood_normal > log_likelihood_abnormal:
+                st.write("The cell is classified as: Normal")
+            else:
+                st.write("The cell is classified as: Abnormal")
+        
+        # Classify abnormal cell feature
+        if st.button('Classify Abnormal Cell'):
+            input_data = pd.DataFrame({
+                'mean_intensity': [mean_intensity],
+                'circularity': [circularity],
+                'aspect_ratio': [aspect_ratio]
+            })
+            
+            # Standardize the input data
+            scaler = StandardScaler()
+            input_data_scaled = scaler.fit_transform(input_data)
+            
+            # Convert the scaled input data to a DataFrame with feature names
+            input_data_scaled_df = pd.DataFrame(input_data_scaled, columns=['mean_intensity', 'circularity', 'aspect_ratio'])
+            
+            # Calculate log-likelihoods for both classes
+            log_likelihood_normal = normal_model.score_samples(input_data_scaled_df)
+            log_likelihood_abnormal = abnormal_model.score_samples(input_data_scaled_df)
+            
+            # Classify based on the higher log-likelihood
+            if log_likelihood_normal > log_likelihood_abnormal:
+                st.write("The cell is classified as: Normal")
+            else:
+                st.write("The cell is classified as: Abnormal")
 
 # Optional: Display feature distributions using seaborn
 st.subheader('Feature Distributions')
 
-# Display distribution for normal and abnormal cells if CSVs are uploaded
-normal_file = st.file_uploader("Upload the Normal Cells CSV File", type=['csv'])
-abnormal_file = st.file_uploader("Upload the Abnormal Cells CSV File", type=['csv'])
-
 if normal_file is not None and abnormal_file is not None:
-    normal_df = pd.read_csv(normal_file)
-    abnormal_df = pd.read_csv(abnormal_file)
-    
     # Plot feature distributions for the uploaded data
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 
