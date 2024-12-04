@@ -80,18 +80,17 @@ def main():
             }
             
             # Save model as a pickle file in memory
-            model_pickle = BytesIO()
-            pickle.dump(model, model_pickle)
-            model_pickle.seek(0)
-            
-            # Provide a download button for the user to download the model
+            with open('cell_classification_model.pkl', 'wb') as file:
+                pickle.dump(model, file)
+
+            st.write("Model saved as 'cell_classification_model.pkl'.")
             st.download_button(
-                label="Download Generated Classification Model",
-                data=model_pickle,
-                file_name="cell_classification_model.pkl",
-                mime="application/octet-stream"
+                label="Download Saved Model",
+                data=open('cell_classification_model.pkl', 'rb').read(),
+                file_name='cell_classification_model.pkl',
+                mime='application/octet-stream'
             )
-            st.write("Model generated. You can download the model file.")
+            
         else:
             # If a model file is uploaded, load it
             model_pickle = model_file.read()
