@@ -1,60 +1,57 @@
-# streamlit_classifier.py
 import streamlit as st
+import pandas as pd
 import pickle
+import tempfile
 
-# Load thresholds from the model file
-@st.cache
-def load_model(model_path):
-    with open(model_path, 'rb') as model_file:
-        return pickle.load(model_file)
+def generate_model(normal_csv_path, abnormal_csv_path, output_model_path='threshold_model.pkl'):
+    # Load the datasets
+    normal_df = pd.read_csv(normal_csv_path)
+    abnormal_df = pd.read_csv(abnormal_csv_path)
 
-# Classify user input based on thresholds
-def classify_single_input(input_values, thresholds):
-    results = {}
-    for feature, value in input_values.items():
-        if feature not in thresholds:
-            results[feature] = "unknown"  # Handle missing feature thresholds
-            continue
-        t = thresholds[feature]
-        if t['normal_min'] <= value <= t['normal_max']:
-            results[feature] = "normal"
-        elif t['abnormal_min'] <= value <= t['abnormal_max']:
-            results[feature] = "abnormal"
-        else:
-            results[feature] = "unknown"
-    return results
+    # Calculate thresholds for each feature
+    thresholds = {}
+    features = normal_df.columns
+    for feature in features:
+        normal_min = normal_df[feature].min()
+        normal_max = normal_df[feature].max()
+        abnormal_min = abnormal_df[feature].min()
+        abnormal_max = abnormal_df[feature].max()
+
+        thresholds[feature] = {
+            'normal_min': normal_min,
+            'normal_max': normal_max,
+            'abnormal_min': abnormal_min,
+            'abnormal_max': abnormal_max
+        }
+
+    # Save the thresholds to a file
+    with open(output_model_path, 'wb') as model_file:
+        pickle.dump(thresholds, model_file)
+
+    st.success(f"Threshold model saved to {output_model_path}")
+    return thresholds
 
 # Streamlit UI
-st.title("Real-Time Threshold-Based Classifier")
+st.title("Threshold Model Generator")
 
-# Step 1: Load Threshold Model
-st.header("Step 1: Load Pre-trained Threshold Model")
-model_file = st.file_uploader("Upload Threshold Model (threshold_model.pkl)", type=["pkl"])
+# File uploaders for normal and abnormal datasets
+normal_file = st.file_uploader("Upload the normal dataset (CSV)", type=["csv"])
+abnormal_file = st.file_uploader("Upload the abnormal dataset (CSV)", type=["csv"])
 
-if model_file:
-    thresholds = load_model(model_file)
-    st.success("Model loaded successfully!")
+if normal_file is not None and abnormal_file is not None:
+    # Save the uploaded files to temporary locations
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_normal, tempfile.NamedTemporaryFile(delete=False) as tmp_abnormal:
+        tmp_normal.write(normal_file.getvalue())
+        tmp_abnormal.write(abnormal_file.getvalue())
+        normal_temp_path = tmp_normal.name
+        abnormal_temp_path = tmp_abnormal.name
 
-    # Step 2: User Input for Classification
-    st.header("Step 2: Enter Feature Values for Real-Time Classification")
-    st.subheader("Input values for each feature:")
+    # Generate the model with uploaded files
+    thresholds = generate_model(normal_temp_path, abnormal_temp_path)
 
-    # Input fields for each feature
-    mean_intensity = st.number_input("Mean Intensity", min_value=0.0, step=0.1)
-    area = st.number_input("Area", min_value=0.0, step=0.1)
-    perimeter = st.number_input("Perimeter", min_value=0.0, step=0.1)
-    circularity = st.number_input("Circularity", min_value=0.0, step=0.01)
+    # Show a preview of the thresholds
+    st.write("Generated thresholds:")
+    st.write(thresholds)
 
-    # Classify button
-    if st.button("Classify"):
-        input_values = {
-            'mean_intensity': mean_intensity,
-            'area': area,
-            'perimeter': perimeter,
-            'circularity': circularity
-        }
-        classification_results = classify_single_input(input_values, thresholds)
-        
-        st.subheader("Classification Results:")
-        for feature, classification in classification_results.items():
-            st.write(f"**{feature}**: {classification}")
+else:
+    st.warning("Please upload both normal and abnormal datasets to generate the model.")
