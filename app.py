@@ -1,17 +1,17 @@
 import pandas as pd
 import numpy as np
 import pickle
-import streamlit as st
 import matplotlib.pyplot as plt
-from io import BytesIO
 
 # Function to calculate thresholds for each feature
 def calculate_thresholds(df, features, quantile=0.9):
     thresholds = {}
     
     for feature in features:
-        # Calculate the threshold for each feature based on the quantile (90th percentile)
+        # Calculate the threshold for each feature based on the quantile
         threshold = df[feature].quantile(quantile)
+        
+        # Store the thresholds
         thresholds[feature] = threshold
         
         # Visualize the feature distributions
@@ -21,103 +21,57 @@ def calculate_thresholds(df, features, quantile=0.9):
         plt.title(f"Feature: {feature}")
         plt.xlabel(feature)
         plt.ylabel("Frequency")
-        st.pyplot(plt)  # Display plot in Streamlit
+        plt.legend()
+        plt.show()
     
     return thresholds
 
-# Function to classify input data based on normal and abnormal thresholds
+# Function to classify input data based on thresholds
 def classify_data(input_data, normal_thresholds, abnormal_thresholds, features):
-    classification = 'normal'  # Default classification
-    
+    # Classify based on threshold conditions
     for feature in features:
-        # Get the threshold values for the feature
         normal_threshold = normal_thresholds[feature]
         abnormal_threshold = abnormal_thresholds[feature]
         
-        feature_value = input_data[feature]
-        
-        # If feature exceeds the abnormal threshold, classify as abnormal
-        if feature_value >= abnormal_threshold:
-            classification = 'abnormal'
-            break
-        # If feature is below the normal threshold, classify as normal
-        elif feature_value <= normal_threshold:
-            classification = 'normal'
-            break
-        else:
-            classification = 'abnormal'
+        if input_data[feature] < normal_threshold:
+            return 'normal'
+        elif input_data[feature] >= abnormal_threshold:
+            return 'abnormal'
     
-    return classification
+    # If no feature triggers a classification, return 'normal'
+    return 'normal'
 
-# Streamlit app
-def main():
-    st.title("Cell Classification App")
-    
-    # Upload normal and abnormal CSV files
-    normal_file = st.file_uploader("Upload normal data CSV", type=["csv"])
-    abnormal_file = st.file_uploader("Upload abnormal data CSV", type=["csv"])
-    
-    # Option to upload a pre-trained classification model .pkl file
-    model_file = st.file_uploader("Upload your pre-trained model file", type=["pkl"])
-    
-    if normal_file is not None and abnormal_file is not None:
-        # Load CSV data
-        normal_df = pd.read_csv(normal_file)
-        abnormal_df = pd.read_csv(abnormal_file)
-        
-        # Define the feature columns to calculate thresholds for
-        features = ['mean_intensity', 'aspect_ratio', 'circularity']
-        
-        # Calculate thresholds for each feature (For normal data and abnormal data)
-        normal_thresholds = calculate_thresholds(normal_df, features)
-        abnormal_thresholds = calculate_thresholds(abnormal_df, features)
-        
-        # If no model file is uploaded, save the calculated thresholds as a model
-        if model_file is None:
-            model = {
-                'normal_thresholds': normal_thresholds,
-                'abnormal_thresholds': abnormal_thresholds
-            }
-            
-            # Save model as a pickle file in memory
-            with open('cell_classification_model.pkl', 'wb') as file:
-                pickle.dump(model, file)
+# Load your CSV data (Normal and Abnormal Data)
+normal_df = pd.read_csv("normal_cells.csv")
+abnormal_df = pd.read_csv("abnormal_cells.csv")
 
-            st.write("Model saved as 'cell_classification_model.pkl'.")
-            st.download_button(
-                label="Download Saved Model",
-                data=open('cell_classification_model.pkl', 'rb').read(),
-                file_name='cell_classification_model.pkl',
-                mime='application/octet-stream'
-            )
-            
-        else:
-            # If a model file is uploaded, load it
-            model_pickle = model_file.read()
-            loaded_model = pickle.loads(model_pickle)
-            
-            normal_thresholds = loaded_model['normal_thresholds']
-            abnormal_thresholds = loaded_model['abnormal_thresholds']
-            
-            st.write("Model loaded from the uploaded file.")
-        
-        # Input fields for classification
-        st.subheader("Enter feature values to classify the data:")
-        mean_intensity = st.number_input("Mean Intensity", value=0.0)
-        aspect_ratio = st.number_input("Aspect Ratio", value=0.0)
-        circularity = st.number_input("Circularity", value=0.0)
-        
-        input_data = {
-            'mean_intensity': mean_intensity,
-            'aspect_ratio': aspect_ratio,
-            'circularity': circularity
-        }
-        
-        # Classify the input data
-        if st.button("Classify"):
-            classification_result = classify_data(input_data, normal_thresholds, abnormal_thresholds, features)
-            st.write(f"The input data is classified as: {classification_result}")
+# Define the feature columns to calculate thresholds for
+features = ['mean_intensity', 'aspect_ratio', 'circularity']
 
-# Run the app
-if __name__ == "__main__":
-    main()
+# Calculate thresholds for each feature (For normal data and abnormal data)
+normal_thresholds = calculate_thresholds(normal_df, features)
+abnormal_thresholds = calculate_thresholds(abnormal_df, features)
+
+# Now let's assume we have some input data for classification
+input_data = {
+    'mean_intensity': 130.94,
+    'aspect_ratio': 1.07,
+    'circularity': 0.67
+}
+
+# Classify the input data
+classification_result = classify_data(input_data, normal_thresholds, abnormal_thresholds, features)
+
+# Output the result
+print(f"The input data is classified as: {classification_result}")
+
+# Save the thresholds as a pickle file
+model = {
+    'normal_thresholds': normal_thresholds,
+    'abnormal_thresholds': abnormal_thresholds
+}
+
+with open('cell_classification_model.pkl', 'wb') as file:
+    pickle.dump(model, file)
+
+print("Model saved as 'cell_classification_model.pkl'")
