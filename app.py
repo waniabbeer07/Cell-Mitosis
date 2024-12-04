@@ -9,7 +9,7 @@ def generate_model(normal_csv_path, abnormal_csv_path, output_model_path='thresh
     abnormal_df = pd.read_csv(abnormal_csv_path)
 
     # Features we are interested in
-    features = ['mean intensity', 'area', 'circularity']
+    features = ['mean_intensity', 'area', 'circularity']
 
     # Calculate thresholds for each feature
     thresholds = {}
@@ -62,7 +62,8 @@ if threshold_model_file is not None:
     st.write("Using the uploaded threshold model.")
 
 else:
-    # File uploaders for normal and abnormal datasets if model is not uploaded
+    # Ask user to upload normal and abnormal datasets if no model is uploaded
+    st.subheader("Upload Datasets for Threshold Generation")
     normal_file = st.file_uploader("Upload the normal dataset (CSV)", type=["csv"])
     abnormal_file = st.file_uploader("Upload the abnormal dataset (CSV)", type=["csv"])
 
@@ -85,7 +86,7 @@ else:
 st.subheader("Enter feature values to classify:")
 
 input_values = {}
-input_values['mean intensity'] = st.number_input("Enter value for mean intensity", value=0.0)
+input_values['mean_intensity'] = st.number_input("Enter value for mean intensity", value=0.0)
 input_values['area'] = st.number_input("Enter value for area", value=0.0)
 input_values['circularity'] = st.number_input("Enter value for circularity", value=0.0)
 
