@@ -1,3 +1,4 @@
+# app.py
 import streamlit as st
 import pandas as pd
 import joblib
@@ -5,6 +6,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import seaborn as sns
+from model_train import CombinedKDEModel  # Import the class definition
 
 # Streamlit app layout
 st.title('Cell Classification App')
