@@ -1,12 +1,11 @@
-# app.py
 import streamlit as st
 import pandas as pd
 import joblib
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import seaborn as sns
-from model_train import CombinedKDEModel  # Import the class definition
+from sklearn.preprocessing import StandardScaler
+from model_train import CombinedKDEModel  # Import the CombinedKDEModel
 
 # Streamlit app layout
 st.title('Cell Classification App')
@@ -63,24 +62,13 @@ if model_file is not None and normal_file is not None and abnormal_file is not N
         # Predict button to classify the cell
         if st.button('Classify'):
             # Prepare the input data for prediction
-            input_data = pd.DataFrame({
-                'mean_intensity': [mean_intensity],
-                'circularity': [circularity],
-                'aspect_ratio': [aspect_ratio]
-            })
+            input_data = np.array([[mean_intensity, circularity, aspect_ratio]])
+
+            # Classify using the loaded model (CombinedKDEModel)
+            classification = model.classify(input_data)
             
-            # Standardize the input data
-            scaler = StandardScaler()
-            input_data_scaled = scaler.fit_transform(input_data)
-            
-            # Make prediction using the loaded model
-            prediction = model.predict(input_data_scaled)
-            
-            # Map the prediction to a label
-            if prediction == 0:
-                st.write(f'The cell is classified as: Normal')
-            else:
-                st.write(f'The cell is classified as: Abnormal')
+            # Display result
+            st.write(f'The cell is classified as: {classification}')
     else:
         st.write("The dataset must contain the columns: 'mean_intensity', 'circularity', and 'aspect_ratio'.")
 
