@@ -85,21 +85,20 @@ if normal_file and abnormal_file:
 
     st.write(f"Model saved as '{model_file_path}'")
 
-# Input data for classification
+# Feature selection and input data for classification
 st.sidebar.header("Input Data for Classification")
-mean_intensity = st.sidebar.number_input("Mean Intensity", min_value=0.0, step=0.01)
-aspect_ratio = st.sidebar.number_input("Aspect Ratio", min_value=0.0, step=0.01)
-circularity = st.sidebar.number_input("Circularity", min_value=0.0, step=0.01)
 
-input_data = {
-    'mean_intensity': mean_intensity,
-    'aspect_ratio': aspect_ratio,
-    'circularity': circularity
-}
+# Let user input any features
+selected_features = st.sidebar.multiselect("Select Features", ['mean_intensity', 'aspect_ratio', 'circularity'])
+
+# Create input fields based on selected features
+input_data = {}
+for feature in selected_features:
+    input_data[feature] = st.sidebar.number_input(f"Enter {feature}", min_value=0.0, step=0.01)
 
 # Classify the input data if the model is loaded
-if 'normal_thresholds' in locals() and 'abnormal_thresholds' in locals():
-    classification_result = classify_data(input_data, normal_thresholds, abnormal_thresholds, features)
+if 'normal_thresholds' in locals() and 'abnormal_thresholds' in locals() and selected_features:
+    classification_result = classify_data(input_data, normal_thresholds, abnormal_thresholds, selected_features)
     st.write(f"The input data is classified as: **{classification_result}**")
 else:
-    st.write("Please upload the normal and abnormal data to generate a model for classification.")
+    st.write("Please upload the normal and abnormal data to generate a model for classification and select at least one feature to classify.")
