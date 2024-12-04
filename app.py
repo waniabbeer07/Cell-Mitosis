@@ -9,7 +9,7 @@ def generate_model(normal_csv_path, abnormal_csv_path, output_model_path='thresh
     abnormal_df = pd.read_csv(abnormal_csv_path)
 
     # Define the features we are interested in
-    features = ['mean_intensity, 'aspect_ratio', 'circularity']
+    features = ['mean_intensity', 'aspect_ratio', 'circularity']
 
     # Calculate min and max thresholds for each feature
     thresholds = {}
