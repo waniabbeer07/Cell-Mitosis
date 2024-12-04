@@ -62,26 +62,28 @@ if threshold_model_file is not None:
 
     st.success("Threshold model loaded successfully.")
     st.write("Using the uploaded threshold model.")
-
 else:
-    # File uploaders for normal and abnormal datasets if model is not uploaded
-    normal_file = st.file_uploader("Upload the normal dataset (CSV)", type=["csv"])
-    abnormal_file = st.file_uploader("Upload the abnormal dataset (CSV)", type=["csv"])
+    thresholds = None  # No model uploaded yet
 
-    if normal_file is not None and abnormal_file is not None:
-        # Save the uploaded files to temporary locations
-        with tempfile.NamedTemporaryFile(delete=False) as tmp_normal, tempfile.NamedTemporaryFile(delete=False) as tmp_abnormal:
-            tmp_normal.write(normal_file.getvalue())
-            tmp_abnormal.write(abnormal_file.getvalue())
-            normal_temp_path = tmp_normal.name
-            abnormal_temp_path = tmp_abnormal.name
+# Always display the uploaders for normal and abnormal datasets
+normal_file = st.file_uploader("Upload the normal dataset (CSV)", type=["csv"])
+abnormal_file = st.file_uploader("Upload the abnormal dataset (CSV)", type=["csv"])
 
-        # Generate the model with uploaded files
+if normal_file is not None and abnormal_file is not None:
+    # Save the uploaded files to temporary locations
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_normal, tempfile.NamedTemporaryFile(delete=False) as tmp_abnormal:
+        tmp_normal.write(normal_file.getvalue())
+        tmp_abnormal.write(abnormal_file.getvalue())
+        normal_temp_path = tmp_normal.name
+        abnormal_temp_path = tmp_abnormal.name
+
+    # Generate the model with uploaded files if no custom model is provided
+    if thresholds is None:
         thresholds = generate_model(normal_temp_path, abnormal_temp_path)
 
-        # Show a preview of the thresholds
-        st.write("Generated thresholds:")
-        st.write(thresholds)
+    # Show a preview of the thresholds
+    st.write("Generated thresholds:")
+    st.write(thresholds)
 
 # Get user input for classification of the three features
 st.subheader("Enter feature values to classify:")
