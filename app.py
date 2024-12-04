@@ -8,10 +8,10 @@ def generate_model(normal_csv_path, abnormal_csv_path, output_model_path='thresh
     normal_df = pd.read_csv(normal_csv_path)
     abnormal_df = pd.read_csv(abnormal_csv_path)
 
-    # Features we are interested in
-    features = ['mean_intensity', 'area', 'circularity']
+    # Define the features we are interested in
+    features = ['min_intensity', 'aspect_ratio', 'circularity']
 
-    # Calculate thresholds for each feature
+    # Calculate min and max thresholds for each feature
     thresholds = {}
     for feature in features:
         normal_min = normal_df[feature].min()
@@ -37,10 +37,12 @@ def classify_input(input_values, thresholds):
     classification = {}
     for feature, value in input_values.items():
         # Check if the value is within the normal range
-        if value < thresholds[feature]['normal_min'] or value > thresholds[feature]['normal_max']:
+        if thresholds[feature]['normal_min'] <= value <= thresholds[feature]['normal_max']:
+            classification[feature] = 'normal'
+        elif thresholds[feature]['abnormal_min'] <= value <= thresholds[feature]['abnormal_max']:
             classification[feature] = 'abnormal'
         else:
-            classification[feature] = 'normal'
+            classification[feature] = 'out of bounds'
     return classification
 
 # Streamlit UI
@@ -62,8 +64,7 @@ if threshold_model_file is not None:
     st.write("Using the uploaded threshold model.")
 
 else:
-    # Ask user to upload normal and abnormal datasets if no model is uploaded
-    st.subheader("Upload Datasets for Threshold Generation")
+    # File uploaders for normal and abnormal datasets if model is not uploaded
     normal_file = st.file_uploader("Upload the normal dataset (CSV)", type=["csv"])
     abnormal_file = st.file_uploader("Upload the abnormal dataset (CSV)", type=["csv"])
 
@@ -86,12 +87,13 @@ else:
 st.subheader("Enter feature values to classify:")
 
 input_values = {}
-input_values['mean_intensity'] = st.number_input("Enter value for mean intensity", value=0.0)
-input_values['area'] = st.number_input("Enter value for area", value=0.0)
+input_values['min_intensity'] = st.number_input("Enter value for min intensity", value=0.0)
+input_values['aspect_ratio'] = st.number_input("Enter value for aspect ratio", value=0.0)
 input_values['circularity'] = st.number_input("Enter value for circularity", value=0.0)
 
 if st.button("Classify"):
-    classification = classify_input(input_values, thresholds)
-    st.write("Classification Results:")
-    for feature, result in classification.items():
-        st.write(f"{feature}: {result}")
+    if thresholds:
+        classification = classify_input(input_values, thresholds)
+        st.write("Classification Results:")
+        for feature, result in classification.items():
+            st.write(f"{feature}: {result}")
