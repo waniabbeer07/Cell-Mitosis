@@ -4,3 +4,4 @@ joblib
 streamlit
 matplotlib
 seaborn
+cell_classifier
