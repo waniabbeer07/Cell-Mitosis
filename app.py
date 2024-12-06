@@ -1,102 +1,57 @@
+import streamlit as st
+import joblib
 import pandas as pd
-from sklearn.metrics import balanced_accuracy_score, classification_report
-from imblearn.over_sampling import SMOTE
-from sklearn.model_selection import train_test_split
+import numpy as np
 from sklearn.preprocessing import StandardScaler
-from sklearn.naive_bayes import GaussianNB
 
-# Load your data
-df = pd.read_csv('/content/data.csv')
+# Load the trained models
+anomaly_model = joblib.load('/content/anomaly_detection_model.pkl')
+mitosis_model = joblib.load('/content/mitosis_stage_prediction_model.pkl')
 
-# Drop the 'frame' column if it exists
-df = df.drop(columns=['frame'], errors='ignore')
-
-# Save the modified dataframe as a new CSV file
-df.to_csv('/content/new_data.csv', index=False)
-
-# Combine the datasets and add labels (assuming you have 'normal_df' and 'abnormal_df' already)
-normal_df = df[df['anomaly_status'] == 1]  # Assuming normal cells are labeled as 1
-abnormal_df = df[df['anomaly_status'] == -1]  # Assuming abnormal cells are labeled as -1
-
-normal_df['anomaly_status'] = 1  # Normal cells are labeled as 1
-abnormal_df['anomaly_status'] = -1  # Abnormal cells are labeled as -1
-data = pd.concat([normal_df, abnormal_df])
-
-# Features to include (excluding 'frame')
-features = ['mean_intensity', 'circularity', 'aspect_ratio']
-X = data[features]
-y = data['anomaly_status']
-
-# Resample the dataset to handle class imbalance
-smote = SMOTE(random_state=42)
-X_resampled, y_resampled = smote.fit_resample(X, y)
-
-# Split into train-test
-X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.3, random_state=42)
-
-# Standardize the features
+# Load the scaler used for standardizing the features during training
 scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
 
-# Train a Gaussian Naive Bayes model for anomaly detection (Normal/Abnormal classification)
-nb = GaussianNB()
-nb.fit(X_train_scaled, y_train)
+# Define the features for prediction
+features = ['mean_intensity', 'circularity', 'aspect_ratio']
 
-# Predict on the test set
-y_pred = nb.predict(X_test_scaled)
+# Function to make predictions for anomaly detection and mitosis stage
+def predict_anomaly_and_mitosis(mean_intensity, circularity, aspect_ratio):
+    # Create a DataFrame for input data
+    input_data = pd.DataFrame([[mean_intensity, circularity, aspect_ratio]], columns=features)
+    
+    # Standardize the features using the same scaler used during training
+    input_data_scaled = scaler.fit_transform(input_data)
 
-# Classification Report for anomaly detection
-print("Balanced Classification Report for Anomaly Detection:")
-print(classification_report(y_test, y_pred))
+    # Predict anomaly status (normal/abnormal)
+    anomaly_prediction = anomaly_model.predict(input_data_scaled)
+    anomaly_status = "Normal" if anomaly_prediction == 1 else "Abnormal"
 
-# Balanced Accuracy Score for anomaly detection
-balanced_accuracy = balanced_accuracy_score(y_test, y_pred)
-print(f"Balanced Accuracy Score for Anomaly Detection: {balanced_accuracy:.4f}")
+    # Predict mitosis stage
+    mitosis_prediction = mitosis_model.predict(input_data_scaled)
+    mitosis_stage_mapping = {0: 'Prophase/Metaphase', 1: 'Telophase', 2: 'Anaphase'}
+    mitosis_stage = mitosis_stage_mapping[mitosis_prediction[0]]
 
-# Now let's predict the mitosis stages using the same model
-# Map the 'mitosis_stage' column to numerical values using the mapping
-mitosis_mapping = {'Prophase/Metaphase': 0, 'Telophase': 1, 'Anaphase': 2}
+    return anomaly_status, mitosis_stage
 
-# Assuming 'mitosis_stage' is a column in your data with labels for mitosis stages
-df['mitosis_stage_num'] = df['mitosis_stage'].map(mitosis_mapping)
+# Streamlit app layout
+st.title('Cell Anomaly Detection and Mitosis Stage Prediction')
 
-# Drop rows with NaN values in the target variable after mapping
-df = df.dropna(subset=['mitosis_stage_num'])
+st.write("""
+    This application allows you to predict cell anomaly status (Normal/Abnormal) and mitosis stages (Prophase/Metaphase, 
+    Telophase, Anaphase) based on cell features such as mean intensity, circularity, and aspect ratio.
+""")
 
-# Features and target for mitosis stage prediction
-X_mitosis = df[features]
-y_mitosis = df['mitosis_stage_num']
+# Input fields for the user to enter the cell features
+mean_intensity = st.number_input('Enter Mean Intensity:', min_value=0.0, max_value=100.0, step=0.1)
+circularity = st.number_input('Enter Circularity:', min_value=0.0, max_value=1.0, step=0.01)
+aspect_ratio = st.number_input('Enter Aspect Ratio:', min_value=0.0, max_value=10.0, step=0.1)
 
-# Split into train-test for mitosis prediction
-X_train_mitosis, X_test_mitosis, y_train_mitosis, y_test_mitosis = train_test_split(X_mitosis, y_mitosis, test_size=0.3, random_state=42)
+# Button to make predictions
+if st.button('Predict'):
+    anomaly_status, mitosis_stage = predict_anomaly_and_mitosis(mean_intensity, circularity, aspect_ratio)
 
-# Train a Gaussian Naive Bayes model for mitosis stage prediction
-nb_mitosis = GaussianNB()
-nb_mitosis.fit(X_train_mitosis, y_train_mitosis)
+    # Display results
+    st.subheader('Prediction Results:')
+    st.write(f"Anomaly Status: {anomaly_status}")
+    st.write(f"Mitosis Stage: {mitosis_stage}")
 
-# Predict on the test set for mitosis stages
-y_pred_mitosis = nb_mitosis.predict(X_test_mitosis)
-
-# Classification Report for mitosis stage prediction
-print("\nBalanced Classification Report for Mitosis Stage Prediction:")
-print(classification_report(y_test_mitosis, y_pred_mitosis))
-
-# Balanced Accuracy Score for mitosis stage prediction
-balanced_accuracy_mitosis = balanced_accuracy_score(y_test_mitosis, y_pred_mitosis)
-print(f"Balanced Accuracy Score for Mitosis Stage Prediction: {balanced_accuracy_mitosis:.4f}")
-
-# Now let's add the predicted mitosis stages as a new column in the original dataframe
-df['predicted_mitosis_stage'] = nb_mitosis.predict(df[features])
-
-# Map the numeric values back to stage names
-mitosis_reverse_mapping = {0: 'Prophase/Metaphase', 1: 'Telophase', 2: 'Anaphase'}
-df['predicted_mitosis_stage'] = df['predicted_mitosis_stage'].map(mitosis_reverse_mapping)
-
-# Save the DataFrame with predicted mitosis stages as a new CSV file
-df.to_csv('/content/data_with_predicted_mitosis_stages.csv', index=False)
-
-# Optionally print the predicted mitosis stages for the test set
-print("\nPredicted Mitosis Stages for the test set:")
-for i, stage in enumerate(df['predicted_mitosis_stage']):
-    print(f"Sample {i+1}: Mitosis Stage - {stage}")
