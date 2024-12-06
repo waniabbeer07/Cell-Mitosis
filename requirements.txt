@@ -1,7 +1,4 @@
-scikit-learn
-pandas
-joblib
-streamlit
-matplotlib
-seaborn
-cell_classifier
+streamlit==1.19.0
+pandas==1.5.0
+scikit-learn==1.0.2
+imbalanced-learn==0.8.0
